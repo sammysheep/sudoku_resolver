@@ -33,20 +33,16 @@ fn row(g: &[u8], y: usize) -> impl Iterator<Item = u8> + '_ {
     g[y * 9..y * 9 + 9].iter().copied()
 }
 
-// More similar to existing implementations but allocates and does multiple passes
-fn free(g: &[u8], x: usize, y: usize) -> Vec<u8> {
-    let mut freeset = Vec::new();
-    for elem in b"123456789" {
+// More similar to existing implementations using an iterator
+fn free(g: &[u8], x: usize, y: usize) -> impl Iterator<Item = u8> + '_ {
+    b"123456789".iter().copied().filter(move |elem| {
         // Iterators consume, so this is necessary for correctness
         let mut t27 = row(g, y).chain(col(g, x)).chain(sqr(g, x, y));
-        if !t27.any(|c| c == *elem) {
-            freeset.push(*elem);
-        }
-    }
-    freeset
+        !t27.any(|c| c == *elem)
+    })
 }
 
-// Avoids allocating by using an iterator and scans in a single pass
+// Avoids allocating by using an iterator and scans in a single pass but a different approach
 fn free_faster(g: &[u8], x: usize, y: usize) -> impl Iterator<Item = u8> + '_ {
     let numbers_found = row(g, y)
         .chain(col(g, x))
@@ -60,7 +56,7 @@ fn free_faster(g: &[u8], x: usize, y: usize) -> impl Iterator<Item = u8> + '_ {
 
 fn resolv(g: &[u8]) -> Option<Vec<u8>> {
     if let Some(i) = g.iter().position(|&c| c == b'.') {
-        for free_number in free_faster(g, i % 9, i / 9) {
+        for free_number in free(g, i % 9, i / 9) {
             let mut new_board = g.to_owned();
             new_board[i] = free_number;
             if let Some(ng) = resolv(&new_board) {
